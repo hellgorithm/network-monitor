@@ -1,15 +1,9 @@
 import sys, os
 from PyQt4 import QtGui, QtCore, Qt
 import xml.etree.cElementTree as ET
+from notification import Notification
+from notifsettings import NotificationsSettings
 
-
-class Connections(QtGui.QMainWindow):
-	def __init__(self, parent=None):
-		super(Connections, self).__init__(parent)
-		self.setGeometry(100,100,380,400)
-		self.setWindowTitle("Connection Settings")
-		self.setWindowIcon(QtGui.QIcon('openmonitor.png'))
-		#self.show()
 
 
 class Window(QtGui.QMainWindow):
@@ -17,7 +11,8 @@ class Window(QtGui.QMainWindow):
 	def __init__(self):
 		super(Window, self).__init__()
 		self.setGeometry(100,100,380,400)
-		self.setWindowTitle("OpenMonitor Client")
+		self.setFixedSize(self.size())
+		self.setWindowTitle("OpenMonitor")
 		self.setWindowIcon(QtGui.QIcon('openmonitor.png'))
 		self.initButtons()
 		self.initTextBox()
@@ -26,40 +21,57 @@ class Window(QtGui.QMainWindow):
 		self.initLabel()
 		self.show()
 
-		self.dialog = Connections()
+		self.dialog = NotificationsSettings()
 
 	def initLabel(self):
 
-		prefAction = QtGui.QAction("&Connection", self)
-		prefAction.setShortcut("Ctrl+P")
-		prefAction.setStatusTip('Edit Connection')
-		prefAction.triggered.connect(self.openConnectionWindow)
+		# future plan
+		# prefAction = QtGui.QAction("&Connection", self)
+		# prefAction.setShortcut("Ctrl+P")
+		# prefAction.setStatusTip('Edit Connection')
+		# prefAction.triggered.connect(self.openConnectionWindow)
+
+		notifAction = QtGui.QAction("&Notification", self)
+		notifAction.setStatusTip('Edit Notification Settings')
+		notifAction.triggered.connect(self.openConnectionWindow)
 
 		mainMenu = self.menuBar()
 		editMenu = mainMenu.addMenu('&Edit')
-		editMenu.addAction(prefAction)
+		editMenu.addAction(notifAction)
 
 		#editAction.triggered.connect(self.close_application)
 
 	def openConnectionWindow(self):
-		#conn = Connections()
+		#conn = Notifications()
 		self.dialog.show()
 
 
 	def pathListBox(self):
 		self.pathList = QtGui.QListWidget(self)
 		self.pathList.setGeometry(10, 65, 355,290)
-		#self.pathList.itemChanged.connect(self.itemChangedState)
+		self.pathList.itemSelectionChanged.connect(self.on_selection_changed)
+		self.on_selection_changed()
+
+	def on_selection_changed(self):
+		if not self.pathList.selectedItems():
+			self.btnRemove.setEnabled(False)
+		else:
+			self.btnRemove.setEnabled(True)
 
 	def appToPathList(self, path):
-		if self.noDuplicates(path):
-			item = QtGui.QListWidgetItem(path)
-			item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
-			item.setCheckState(QtCore.Qt.Checked)
-			self.pathList.addItem(item)
+		if str(path).strip() == "":
+			empty = "Empty paths are not allowed."
+			reply = QtGui.QMessageBox.question(self, 'Error',  empty, QtGui.QMessageBox.Ok)
+	
 		else:
-			dup_message = "Path already added to watch list. Please select other path."
-			reply = QtGui.QMessageBox.question(self, 'Error',  dup_message, QtGui.QMessageBox.Ok)
+			if self.noDuplicates(path):
+				item = QtGui.QListWidgetItem(path)
+				item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+				item.setCheckState(QtCore.Qt.Checked)
+				self.pathList.addItem(item)
+			else:
+				dup_message = "Path already added to watch list. Please select other path."
+				reply = QtGui.QMessageBox.question(self, 'Error',  dup_message, QtGui.QMessageBox.Ok)
 	
 	# def itemChangedState(self):
 	# 	for x in range(self.pathList.count()):
@@ -68,7 +80,7 @@ class Window(QtGui.QMainWindow):
 
 	def initTextBox(self):
 		self.txtPath = QtGui.QLineEdit(self)
-		self.txtPath.setGeometry(10,30,200,30)
+		self.txtPath.setGeometry(10,30,170,30)
 		self.txtPath.textChanged.connect(self.enableDisableBtnAdd)
 
 	def enableDisableBtnAdd(self):
@@ -82,7 +94,7 @@ class Window(QtGui.QMainWindow):
 
 	def initButtons(self):
 		self.btnAdd = QtGui.QPushButton("Add", self)
-		self.btnAdd.setGeometry(210,30, 80,30)
+		self.btnAdd.setGeometry(180,30, 40,30)
 		self.btnAdd.clicked.connect(self.saveSharedFolder)
 		self.btnAdd.setEnabled(False)
 
@@ -94,9 +106,18 @@ class Window(QtGui.QMainWindow):
 		btnQuit.setGeometry(290,360, 80, 30)
 		btnQuit.clicked.connect(self.close)
 
+		self.btnRemove = QtGui.QPushButton("Remove", self)
+		self.btnRemove.setGeometry(220,30, 70, 30)
+		self.btnRemove.clicked.connect(self.removeItem)
+		self.btnRemove.setEnabled(False)
+
 		btnOpenFolder = QtGui.QPushButton("Browse", self)
-		btnOpenFolder.setGeometry(290,30, 80, 30)
+		btnOpenFolder.setGeometry(290,30, 75, 30)
 		btnOpenFolder.clicked.connect(self.browseFolder)
+
+	def removeItem(self):
+		for item in self.pathList.selectedItems():
+			self.pathList.takeItem(self.pathList.row(item))
 	
 	def saveSharedFolder(self):
 		sharedFolder = self.txtPath.text();
@@ -129,7 +150,7 @@ class Window(QtGui.QMainWindow):
 
 
 	def saveConfigurations(self):
-		root = ET.Element("config")
+		root = ET.parse('client-config.xml').getroot()
 		doc = ET.SubElement(root, "paths")
 
 		for x in range(self.pathList.count()):
@@ -154,7 +175,7 @@ class Window(QtGui.QMainWindow):
 	def closeEvent(self, event):
 
 		quit_msg = "Are you sure you want to exit the program? All unsaved configurations will be lost."
-		reply = QtGui.QMessageBox.question(self, 'Message', quit_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.No)
+		reply = QtGui.QMessageBox.question(self, 'Message', quit_msg, QtGui.QMessageBox.Yes, QtGui.QMessageBox.Cancel)
 
 		if reply == QtGui.QMessageBox.Yes:
 			event.accept()
