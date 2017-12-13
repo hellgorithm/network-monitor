@@ -1,142 +1,78 @@
-#treeview sample from http://trevorius.com/scrapbook/uncategorized/pyqt-custom-abstractitemmodel/
-from PyQt5 import QtCore, QtGui
-
-
-class CustomNode(object):
-    def __init__(self, in_data):
-        self._data = in_data
-        if type(in_data) == tuple:
-            self._data = list(in_data)
-        if type(in_data) in (str,unicode) or not hasattr(in_data, '__getitem__'):
-            self._data = [in_data]
-
-        self._columncount = len(self._data)
-        self._children = []
-        self._parent = None
-        self._row = 0
-
-    def data(self, in_column):
-        if in_column >= 0 and in_column < len(self._data):
-            return self._data[in_column]
-
-    def columnCount(self):
-        return self._columncount
-
-    def childCount(self):
-        return len(self._children)
-
-    def child(self, in_row):
-        if in_row >= 0 and in_row < self.childCount():
-            return self._children[in_row]
-
-    def parent(self):
-        return self._parent
-
-    def row(self):
-        return self._row
-
-    def addChild(self, in_child):
-        in_child._parent = self
-        in_child._row = len(self._children)
-        self._children.append(in_child)
-        self._columncount = max(in_child.columnCount(), self._columncount)
-
-
-class CustomModel(QtCore.QAbstractItemModel):
-    def __init__(self, in_nodes):
-        QtCore.QAbstractItemModel.__init__(self)
-        self._root = CustomNode(None)
-        for node in in_nodes:
-            self._root.addChild(node)
-
-    def rowCount(self, in_index):
-        if in_index.isValid():
-            return in_index.internalPointer().childCount()
-        return self._root.childCount()
-
-    def addChild(self, in_node, in_parent):
-        if not in_parent or not in_parent.isValid():
-            parent = self._root
-        else:
-            parent = in_parent.internalPointer()
-        parent.addChild(in_node)
-
-    def index(self, in_row, in_column, in_parent=None):
-        if not in_parent or not in_parent.isValid():
-            parent = self._root
-        else:
-            parent = in_parent.internalPointer()
-    
-        if not QtCore.QAbstractItemModel.hasIndex(self, in_row, in_column, in_parent):
-            return QtCore.QModelIndex()
-    
-        child = parent.child(in_row)
-        if child:
-            return QtCore.QAbstractItemModel.createIndex(self, in_row, in_column, child)
-        else:
-            return QtCore.QModelIndex()
-
-    def parent(self, in_index):
-        if in_index.isValid():
-            p = in_index.internalPointer().parent()
-            if p:
-                return QtCore.QAbstractItemModel.createIndex(self, p.row(),0,p)
-        return QtCore.QModelIndex()
-
-    def columnCount(self, in_index):
-        if in_index.isValid():
-            return in_index.internalPointer().columnCount()
-        return self._root.childCount()
-
-    def data(self, in_index, role):
-        if not in_index.isValid():
-            return None
-        node = in_index.internalPointer()
-        if role == QtCore.Qt.DisplayRole:
-            return node.data(in_index.column())
-        return None
+from PyQt5 import QtCore, QtWidgets
 
 
 class treeModel():
-    def models(self):
-        #level 0
-        items = []
-        items.append(CustomNode("ROGUE-VM\DEV"))
+    def __init__(self):
+        print("Setting up models")
 
-        #level 1
-        dbObjectsNode = []
-        dbObjectsNode.append(CustomNode("HuManEDGE"))
+    def generateView(self, tw, dat):
 
-        #level 2
-        tableNodes = []
-        tableNodes.append(dbObjectsNode[0])
+        #tests data
+        databases = "HuManEDGE|HuManEDGECLIENT".split("|")
+        ddl = "Tables|Views|Stored Procedures|Functions".split("|")
+        dbo = "hello|world".split("|")
 
-        #level 3
-        listNodes = []
-        listNodes.append(CustomNode("Tables"))
+        server = QtWidgets.QTreeWidgetItem(tw)
+        server.setText(0, "ZERO-VM\DEV")
+        server.setExpanded(True)
+
+        for db in databases:
+            dbObj = QtWidgets.QTreeWidgetItem(server)
+            dbObj.setText(0, db)
+            dbObj.setExpanded(True)
+
+            for schemaObj in ddl:
+                schema = QtWidgets.QTreeWidgetItem(dbObj)
+                schema.setText(0, schemaObj)
+                schema.setExpanded(True)
+
+                for editables in dbo:
+                    edit = QtWidgets.QTreeWidgetItem(schema)
+                    edit.setText(0, editables)
+                    edit.setExpanded(True)
+                    edit.setCheckState(0,QtCore.Qt.Unchecked)
+                    edit.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+
+    def new_cluster(self):
+        print "New Cluster"
+
+    def rename_cluster(self):
+        print "Rename cluster"
+
+    def delete_cluster(self):
+        print "Delete cluster"
+
+    # def openMenu(self, parent=None):
+    #     self.popup_menu = QtWidgets.QMenu(parent)
+    #     self.popup_menu.addAction("New", self.new_cluster)
+    #     self.popup_menu.addAction("Rename", self.rename_cluster)
+    #     self.popup_menu.addSeparator()
+    #     self.popup_menu.addAction("Delete", self.delete_cluster)
+    #     self.popup_menu.exec_(self.treeView.viewport().mapToGlobal(position))
+    def openMenu(self, position):
+        print("hello")
+        menu = QMenu()
+        menu.addAction(self.tr("Edit person"))
+        menu.addAction(self.tr("Edit object/container"))
+        menu.addAction(self.tr("Edit object"))
         
-        listNodes[0].addChild(CustomNode("TB_master_employment_info"))
-        #end level 3
+        menu.exec_(self.treeView.viewport().mapToGlobal(position))
 
-        tableNodes[0].addChild(listNodes[0])
-        #end level 2
-
-        items[0].addChild(dbObjectsNode[0])
-        #end level 1
         
-        
-        # items[1].addChild(CustomNode(["HuManEDGECLIENT"]))
-
-        return CustomModel(items)
-
-# def main():
-#     items = []
-#     for i in 'abc':
-#         items.append( CustomNode(i) )
-#         items[-1].addChild( CustomNode(['d','e','f']) )
-#         items[-1].addChild( CustomNode(['g','h','i']) )
-#     v = QtGui.QTreeView()
-#     v.setModel( CustomModel(items) )
-#     v.show()
-#     return v
-# v = main()
+        # if isinstance(dat,dict):
+        #     for k,v in dat.iteritems():
+        #         item = QtWidgets.QTreeWidgetItem(tw)
+        #         item.setText(0, k)
+        #         item.setCheckState(0,QtCore.Qt.Unchecked)
+        #         item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+        #         item.setExpanded(True)
+        #         self.trViewObjects.doubleClicked.connect(lambda: EventEmmitter(self.trViewObjects))
+        #         self.generateView(item, v)
+        #         #p.addChild(item)        
+        # else:
+        #     for txt in dat:
+        #         item = QtWidgets.QTreeWidgetItem(tw)
+        #         item.setText(0, txt)
+        #         item.setCheckState(0,QtCore.Qt.Unchecked)
+        #         item.setFlags(QtCore.Qt.ItemIsUserCheckable | QtCore.Qt.ItemIsEnabled)
+        #         item.setExpanded(True)

@@ -1,6 +1,7 @@
 import sys
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets, QtGui, QtCore
 from treeModel import treeModel
+from functions import EventEmmitter
 
 
 class ConnectionWindow(QtWidgets.QMainWindow):
@@ -14,8 +15,6 @@ class ConnectionWindow(QtWidgets.QMainWindow):
 		self.setCentralWidget(self.layout)
 		self.setGeometry(10, 10, 250, 130)
 
-		
-		print("opening")
 
 class ConnectLayout(QtWidgets.QWidget):
 	def __init__(self, parent=None):
@@ -84,7 +83,7 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.setWindowTitle("SQLGit")
 		self.setWindowIcon(QtGui.QIcon('./openmonitor.png'))
 		self.setCentralWidget(self.layout)
-		self.setGeometry(10, 10, 400, 400)
+		self.setGeometry(10, 10, 700, 600)
 
 		# filling up a menu bar
 		bar = self.menuBar()
@@ -115,86 +114,143 @@ class MainWindow(QtWidgets.QMainWindow):
 		conn.show()
 
 
+# class Fn():
+# 	def EventEmmitter(self):
+# 		print("hello")
 
 class Layout(QtWidgets.QWidget):
-    def __init__(self, parent=None):
-        super(Layout, self).__init__()
-        # create and set layout to place widgets
-        grid_layout = QtWidgets.QGridLayout(self)
-        
-        fileParentTab = QtWidgets.QTabWidget()
-        contParentTab = QtWidgets.QTabWidget()
-        #contParentTab_layout = QtWidgets.QGridLayout(self)
+	def __init__(self, parent=None):
+		super(Layout, self).__init__()
+		# create and set layout to place widgets
 
-        fileList = QtWidgets.QWidget()
-        changesetListTab = QtWidgets.QWidget()
-        contentTab = QtWidgets.QWidget()
-        versionTab = QtWidgets.QWidget()
+		grid_layout = QtWidgets.QGridLayout(self)
 
-        #self.text_box = QtWidgets.QTextEdit(self)
-        # labelEdited = QtWidgets.QLabel(self)
-        # labelEdited.setText("Edited Objects")
-        # grid_layout.addWidget(labelEdited, 0, 0, 1, 1)
-        model = treeModel()
+		fileParentTab = QtWidgets.QTabWidget()
+		contParentTab = QtWidgets.QTabWidget()
+		#contParentTab_layout = QtWidgets.QGridLayout(self)
 
-        lstCommits = QtWidgets.QListWidget(self)
-        trViewObjects = QtWidgets.QTreeView(self)
-        trViewObjects.setModel(model.models())
-        trViewObjects.setExpanded(True)
-        #self.versionList = QtWidgets.QListWidget(self)
-        #grid_layout.addWidget(self.versionList, 1, 2, 1, 2)
+		fileList = QtWidgets.QWidget()
+		changesetListTab = QtWidgets.QWidget()
+		contentTab = QtWidgets.QWidget()
+		versionTab = QtWidgets.QWidget()
 
-        #tab
+		#self.text_box = QtWidgets.QTextEdit(self)
+		# labelEdited = QtWidgets.QLabel(self)
+		# labelEdited.setText("Edited Objects")
+		# grid_layout.addWidget(labelEdited, 0, 0, 1, 1)
+		
+
+		lstCommits = QtWidgets.QListWidget(self)
+
+		# model = treeModel()
+		# self.trViewObjects = QtWidgets.QTreeView(self)
+		# self.trViewObjects.setModel(model.models())
+		# self.trViewObjects.expandToDepth(2)
+
+		# self.trViewObjects.doubleClicked.connect(lambda: EventEmmitter(self.trViewObjects))
 
 
-        versionList = QtWidgets.QListWidget(self)
-        lstEdited = QtWidgets.QPlainTextEdit(self)
+		dat = {
+			"ZERO-VM\DEV" : {
+				"HuManEDGE" : {
+					"Tables" : [],
+					"Views" : [],
+					"Stored Procedures" : [],
+					"Functions" : [] 
+				}, 
+				"HuManEDGECLIENT" : {
+					"Tables" : [],
+					"Views" : [],
+					"Stored Procedures" : [],
+					"Functions" : [] 
+				}
+			}
+		}
 
-        fileParentTab.addTab(fileList, "Objects")
-        fileParentTab.addTab(changesetListTab, "Changesets")
-        contParentTab.addTab(contentTab,"Details")
-        contParentTab.addTab(versionTab,"Versions")
+		trViewObjects = treeModel()
+		self.objListTab = QtWidgets.QTreeWidget()
+		self.objListTab.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+		self.objListTab.customContextMenuRequested.connect(self.openMenu)
 
-        changesetListTab.layout = QtWidgets.QGridLayout(self)
-        fileList.layout = QtWidgets.QGridLayout(self)
-       	contentTab.layout = QtWidgets.QGridLayout(self)
-       	versionTab.layout = QtWidgets.QGridLayout(self)
+		trViewObjects.generateView(self.objListTab, dat)
 
-       	changesetListTab.layout.addWidget(lstCommits, 0,0,1,1)
-       	fileList.layout.addWidget(trViewObjects,0,0,1,1)
-        contentTab.layout.addWidget(lstEdited, 0,0, 1,2)
-        versionTab.layout.addWidget(versionList,0,0,1,1)
+		#self.objListTab.customContextMenuRequested.connect(trViewObjects.openMenu)
 
-        changesetListTab.setLayout(changesetListTab.layout)
-        fileList.setLayout(fileList.layout)
-        contentTab.setLayout(contentTab.layout)
-        versionTab.setLayout(versionTab.layout)
+		#p.addChild(item) 
 
-        # end tab
+		# item = QtWidgets.QTreeViewItem(self.trViewObjects)
+		# item.setCheckState(0, QtCore.Qt.Unchecked)
 
-        #treeview
-        #trObjList = QtWidgets.QTreeView()
+		#trViewObjects.setExpanded(0, True)
+		#self.versionList = QtWidgets.QListWidget(self)
+		#grid_layout.addWidget(self.versionList, 1, 2, 1, 2)
 
-        #end treeview
+		#tab
 
-        grid_layout.addWidget(contParentTab, 1, 0, 1, 2)
-        grid_layout.addWidget(fileParentTab, 1, 2, 1, 2) #row, column, height, width
-        # self.scriptDetails = QtWidgets.QListWidget(self)
-        # tab_layout.addWidget(self.scriptDetails, 0, 2, 1, 2)
+		versionList = QtWidgets.QListWidget(self)
+		lstEdited = QtWidgets.QPlainTextEdit(self)
 
-        # self.detailsTab = QtWidgets.QWidget()
-        # grid_layout.addTab(tab_layout, 1, 4, 1, 2)
-        #en tab
+		fileParentTab.addTab(fileList, "Objects")
+		fileParentTab.addTab(changesetListTab, "Changesets")
+		contParentTab.addTab(contentTab,"Details")
+		contParentTab.addTab(versionTab,"Versions")
 
-        # self.save_button = QtWidgets.QPushButton('Save')
-        # self.clear_button = QtWidgets.QPushButton('Clear')
-        # self.open_button = QtWidgets.QPushButton('Open')
-        # self.quit_button = QtWidgets.QPushButton('Quit')
+		changesetListTab.layout = QtWidgets.QGridLayout(self)
+		fileList.layout = QtWidgets.QGridLayout(self)
+		contentTab.layout = QtWidgets.QGridLayout(self)
+		versionTab.layout = QtWidgets.QGridLayout(self)
 
-        # grid_layout.addWidget(self.save_button, 2, 0)
-        # grid_layout.addWidget(self.clear_button, 2, 1)
-        # grid_layout.addWidget(self.open_button, 2, 2)
-        # grid_layout.addWidget(self.quit_button, 2, 3)
+		changesetListTab.layout.addWidget(lstCommits, 0,0,1,1)
+		fileList.layout.addWidget(self.objListTab,0,0,1,1)
+		contentTab.layout.addWidget(lstEdited, 0,0, 1,2)
+		versionTab.layout.addWidget(versionList,0,0,1,1)
+
+		changesetListTab.setLayout(changesetListTab.layout)
+		fileList.setLayout(fileList.layout)
+		contentTab.setLayout(contentTab.layout)
+		versionTab.setLayout(versionTab.layout)
+
+		# end tab
+
+		#treeview
+		#trObjList = QtWidgets.QTreeView()
+
+		#end treeview
+
+		grid_layout.addWidget(contParentTab, 1, 0, 1, 2)
+		grid_layout.addWidget(fileParentTab, 1, 2, 1, 2) #row, column, height, width
+		# self.scriptDetails = QtWidgets.QListWidget(self)
+		# tab_layout.addWidget(self.scriptDetails, 0, 2, 1, 2)
+
+		# self.detailsTab = QtWidgets.QWidget()
+		# grid_layout.addTab(tab_layout, 1, 4, 1, 2)
+		#en tab
+
+		# self.save_button = QtWidgets.QPushButton('Save')
+		# self.clear_button = QtWidgets.QPushButton('Clear')
+		# self.open_button = QtWidgets.QPushButton('Open')
+		# self.quit_button = QtWidgets.QPushButton('Quit')
+
+		# grid_layout.addWidget(self.save_button, 2, 0)
+		# grid_layout.addWidget(self.clear_button, 2, 1)
+		# grid_layout.addWidget(self.open_button, 2, 2)
+		# grid_layout.addWidget(self.quit_button, 2, 3)
+
+	def openMenu(self, position):
+
+		indexes = self.objListTab.selectedIndexes()
+
+		if indexes == []:
+			menu = QtWidgets.QMenu()
+			menu.addAction(self.tr("View Object/Info"))
+			menu.addAction(self.tr("Compare to latest"))
+			menu.addAction(self.tr("Compare to other versions"))
+			menu.addAction(self.tr("Compare to other commits"))
+			menu.addAction(self.tr("Revert to previous state"))
+			menu.addAction(self.tr("Include/Exclude"))
+
+			menu.exec_(self.objListTab.viewport().mapToGlobal(position))
+
 
 
 if __name__ == '__main__':
