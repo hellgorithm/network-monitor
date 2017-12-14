@@ -1,11 +1,14 @@
-import sys
+import globalvars
+import sys, os, getpass, platform
 from PyQt5 import QtWidgets, QtGui, QtCore
+import xml.etree.cElementTree as ET
 from treeModel import treeModel
-from functions import EventEmmitter
+from functions import *
+from os.path import expanduser
 
 
 class ConnectionWindow(QtWidgets.QMainWindow):
-    def __init__(self, parent=None):
+	def __init__(self, parent=None):
 		super(ConnectionWindow,self).__init__()
 
 		#initialize window
@@ -13,7 +16,28 @@ class ConnectionWindow(QtWidgets.QMainWindow):
 		self.setWindowTitle("Open Connection")
 		self.setWindowIcon(QtGui.QIcon('./openmonitor.png'))
 		self.setCentralWidget(self.layout)
-		self.setGeometry(10, 10, 250, 130)
+		self.resize(250, 130)
+		self.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+		#self.setGeometry(10, 10, 250, 130)
+		self.center()
+		self.openUserConfig()
+
+	def openUserConfig(self):
+		home = expanduser("~")
+		homeConfigPath = home + "/sqlgit/sqlgit-config.xml"
+
+		if os.path.exists(homeConfigPath):
+			print("read")
+		else:
+			saveConfigurations(homeConfigPath)
+
+	def center(self):
+		frameGm = self.frameGeometry()
+		screen = QtWidgets.QApplication.desktop().screenNumber(QtWidgets.QApplication.desktop().cursor().pos())
+		centerPoint = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+		frameGm.moveCenter(centerPoint)
+		self.move(frameGm.topLeft())
+
 
 
 class ConnectLayout(QtWidgets.QWidget):
@@ -27,49 +51,79 @@ class ConnectLayout(QtWidgets.QWidget):
 		labelDatabase.setText("Database")
 		grid_layout.addWidget(labelDatabase, 0, 0, 1, 3)
 
-		cmbDbase = QtWidgets.QComboBox(self)       	
-		grid_layout.addWidget(cmbDbase, 1, 0, 1, 3)
-		cmbDbase.addItem("Microsoft SQL Server")
+		self.cmbDbase = QtWidgets.QComboBox(self)       	
+		grid_layout.addWidget(self.cmbDbase, 1, 0, 1, 3)
+		self.cmbDbase.addItem("Microsoft SQL Server")
 
 		labelEdited = QtWidgets.QLabel(self)
 		labelEdited.setText("Server/Instance")
 		grid_layout.addWidget(labelEdited, 2, 0, 1, 3)
 
-		cmbServers = QtWidgets.QComboBox(self)       	
-		grid_layout.addWidget(cmbServers, 3, 0, 1, 3)
-		cmbServers.setEditable(True)
-		cmbServers.lineEdit().setMaxLength(100)
+		self.cmbServers = QtWidgets.QComboBox(self)       	
+		grid_layout.addWidget(self.cmbServers, 3, 0, 1, 3)
+		self.cmbServers.setEditable(True)
+		self.cmbServers.lineEdit().setMaxLength(100)
 
-		labelAuthType = QtWidgets.QLabel(self)
-		labelAuthType.setText("Authentication")
-		grid_layout.addWidget(labelAuthType, 4, 0, 1, 3)
+		self.labelAuthType = QtWidgets.QLabel(self)
+		self.labelAuthType.setText("Authentication")
+		grid_layout.addWidget(self.labelAuthType, 4, 0, 1, 3)
 
-		cmbAuthType = QtWidgets.QComboBox(self)  
-		cmbAuthType.addItem("Windows Authentication")
-		cmbAuthType.addItem("SQL Authentication")     	
-		grid_layout.addWidget(cmbAuthType, 5, 0, 1, 3)
+		self.cmbAuthType = QtWidgets.QComboBox(self)  
+		self.cmbAuthType.addItem("Windows Authentication")
+		self.cmbAuthType.addItem("SQL Authentication")     	
+		grid_layout.addWidget(self.cmbAuthType, 5, 0, 1, 3)
+		self.cmbAuthType.currentIndexChanged.connect(self.authChange)
 
 		labelUser = QtWidgets.QLabel(self)
 		labelUser.setText("UserName")
 		grid_layout.addWidget(labelUser, 6, 0, 1, 3)
 
-		txtUserName = QtWidgets.QLineEdit(self)
-		grid_layout.addWidget(txtUserName, 7, 0, 1, 3)
+		self.txtUserName = QtWidgets.QLineEdit(self)
+		grid_layout.addWidget(self.txtUserName, 7, 0, 1, 3)
+		self.txtUserName.setEnabled(False)
 
 		labelPass = QtWidgets.QLabel(self)
 		labelPass.setText("Password")
 		grid_layout.addWidget(labelPass, 8, 0, 1, 3)
 
-		txtPassword = QtWidgets.QLineEdit(self)
-		txtPassword.setEchoMode(QtWidgets.QLineEdit.Password)
-		grid_layout.addWidget(txtPassword, 9, 0, 1, 3)
+		self.txtPassword = QtWidgets.QLineEdit(self)
+		self.txtPassword.setEchoMode(QtWidgets.QLineEdit.Password)
+		self.txtPassword.setEnabled(False)
+		grid_layout.addWidget(self.txtPassword, 9, 0, 1, 3)
 
 
 		btnOpen = QtWidgets.QPushButton('Open')
 		grid_layout.addWidget(btnOpen, 10, 1)
+		btnOpen.clicked.connect(lambda : OpenConnection(self))
 
-		btnCancel = QtWidgets.QPushButton('Cancel')
-		grid_layout.addWidget(btnCancel, 10, 2)
+		self.btnCancel = QtWidgets.QPushButton('Cancel')
+		grid_layout.addWidget(self.btnCancel, 10, 2)
+		self.btnCancel.clicked.connect(parent.close)
+
+		self.setDisplayUser(False)
+
+	def authChange(self):
+		enable = None
+
+		if self.cmbAuthType.currentText() == "Windows Authentication":
+			enable = False
+		else:
+			enable = True
+
+		self.txtUserName.setEnabled(enable)
+		self.txtPassword.setEnabled(enable)
+		self.setDisplayUser(enable)
+
+	def setDisplayUser(self, display):
+		#domain = os.environ['userdnsdomain']
+		user = getpass.getuser()
+		domain = platform.node()
+
+		if not display:
+			self.txtUserName.setText(domain + "\\" + user)
+		else:
+			self.txtUserName.setText("")
+
 
 
 
@@ -83,8 +137,9 @@ class MainWindow(QtWidgets.QMainWindow):
 		self.setWindowTitle("SQLGit")
 		self.setWindowIcon(QtGui.QIcon('./openmonitor.png'))
 		self.setCentralWidget(self.layout)
-		self.setGeometry(10, 10, 700, 600)
-
+		self.resize(700, 600)
+		#self.setGeometry(10, 10, 700, 600)
+		self.center()
 		# filling up a menu bar
 		bar = self.menuBar()
 
@@ -110,8 +165,16 @@ class MainWindow(QtWidgets.QMainWindow):
 		# use `connect` method to bind signals to desired behavior
 		close_action.triggered.connect(self.close)
 
+
 	def addConnection(self):
 		conn.show()
+
+	def center(self):
+		frameGm = self.frameGeometry()
+		screen = QtWidgets.QApplication.desktop().screenNumber(QtWidgets.QApplication.desktop().cursor().pos())
+		centerPoint = QtWidgets.QApplication.desktop().screenGeometry(screen).center()
+		frameGm.moveCenter(centerPoint)
+		self.move(frameGm.topLeft())
 
 
 # class Fn():
@@ -171,7 +234,7 @@ class Layout(QtWidgets.QWidget):
 		self.objListTab = QtWidgets.QTreeWidget()
 		self.objListTab.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
 		self.objListTab.customContextMenuRequested.connect(self.openMenu)
-
+		self.objListTab.setHeaderLabels([""])
 		trViewObjects.generateView(self.objListTab, dat)
 
 		#self.objListTab.customContextMenuRequested.connect(trViewObjects.openMenu)
@@ -250,7 +313,6 @@ class Layout(QtWidgets.QWidget):
 			menu.addAction(self.tr("Include/Exclude"))
 
 			menu.exec_(self.objListTab.viewport().mapToGlobal(position))
-
 
 
 if __name__ == '__main__':
